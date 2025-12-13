@@ -43,7 +43,8 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
+  /* Professional security dashboard theme */
+  --primary: var(--color-blue-600);
   --primary-foreground: var(--color-blue-50);
   --sidebar-primary: var(--color-blue-600);
   --sidebar-primary-foreground: var(--color-blue-50);
@@ -171,7 +172,24 @@
     .container {
       padding-left: 2rem; /* 32px - desktop padding */
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1400px; /* Wider for dashboard */
     }
+  }
+  
+  /* Risk score colors */
+  .risk-low {
+    @apply text-green-500;
+  }
+  
+  .risk-medium {
+    @apply text-yellow-500;
+  }
+  
+  .risk-high {
+    @apply text-orange-500;
+  }
+  
+  .risk-critical {
+    @apply text-red-500;
   }
 }
