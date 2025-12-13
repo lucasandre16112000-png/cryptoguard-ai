@@ -197,4 +197,3 @@ For questions, issues, or feature requests, please open an issue on the GitHub r
 ---
 
 **Built with ❤️ by Lucas André S**  
-**Powered by Manus Platform**
