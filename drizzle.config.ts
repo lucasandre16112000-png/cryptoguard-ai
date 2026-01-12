@@ -1,9 +1,7 @@
 import { defineConfig } from "drizzle-kit";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL is required to run drizzle commands");
-}
+// Default database URL - works out of the box!
+const connectionString = process.env.DATABASE_URL || "mysql://root:root@127.0.0.1:3306/cryptoguard";
 
 export default defineConfig({
   schema: "./drizzle/schema.ts",
