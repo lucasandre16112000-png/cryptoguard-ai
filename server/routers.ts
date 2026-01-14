@@ -1,14 +1,14 @@
-import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
-import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { TRPCError } from "@trpc/server";
-import * as db from "./db";
-import { generateSeedData } from "./blockchainMonitor";
-import { generatePDFReport } from "./pdfGenerator";
+import { z } from 'zod';
+import { publicProcedure, protectedProcedure, router } from './_core/trpc';
+import * as db from './db';
+import { AuthService } from './_core/authService';
+import { TRPCError } from '@trpc/server';
+import { COOKIE_NAME } from '@shared/const';
+import { getSessionCookieOptions } from './_core/cookies';
+import { systemRouter } from './_core/systemRouter';
+import { generateSeedData } from './blockchainMonitor';
+import { generatePDFReport } from './pdfGenerator';
 
-// Admin-only procedure
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required' });
@@ -18,12 +18,59 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 export const appRouter = router({
   system: systemRouter,
-  
+
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    register: publicProcedure
+      .input(z.object({ 
+        name: z.string(),
+        email: z.string().email(), 
+        password: z.string().min(8) 
+      }))
+      .mutation(async ({ input }) => {
+        const { email, password, name } = input;
+        const authService = new AuthService();
+        const passwordHash = await authService.hashPassword(password);
+        const user = await db.createUser({ email, passwordHash, name });
+        return { id: user.id, email: user.email, name: user.name };
+      }),
+
+    login: publicProcedure
+      .input(z.object({ 
+        email: z.string().email(), 
+        password: z.string() 
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { email, password } = input;
+        const user = await db.getUserByEmail(email);
+
+        if (!user || !user.passwordHash) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid email or password' });
+        }
+
+        const authService = new AuthService();
+        const passwordMatch = await authService.comparePasswords(password, user.passwordHash);
+
+        if (!passwordMatch) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid email or password' });
+        }
+
+        const token = await authService.createSessionToken({ userId: user.id });
+        
+        ctx.res.cookie(COOKIE_NAME, token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        });
+
+        return { id: user.id, email: user.email, name: user.name, role: user.role };
+      }),
+
+    me: protectedProcedure.query(opts => opts.ctx.user),
+
     logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.res.clearCookie(COOKIE_NAME, { path: '/' });
       return { success: true } as const;
     }),
   }),
@@ -65,7 +112,7 @@ export const appRouter = router({
     list: protectedProcedure
       .input(z.object({
         limit: z.number().optional(),
-        network: z.enum(["ethereum", "bsc", "polygon"]).optional(),
+        network: z.enum(['ethereum', 'bsc', 'polygon']).optional(),
         isSuspicious: z.boolean().optional(),
         minRiskScore: z.number().optional(),
         startDate: z.date().optional(),
@@ -87,88 +134,35 @@ export const appRouter = router({
 
   // ========== ADDRESSES ==========
   addresses: router({
-    list: protectedProcedure
-      .input(z.object({ limit: z.number().optional() }))
-      .query(async ({ input }) => {
-        return db.getAllAddresses(input.limit);
-      }),
-      
-    get: protectedProcedure
-      .input(z.object({ address: z.string() }))
-      .query(async ({ input }) => {
-        const address = await db.getAddressByAddress(input.address);
-        if (!address) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Address not found' });
-        }
-        
-        // Get transactions for this address
-        const allTxs = await db.getTransactions({ limit: 1000 });
-        const addressTxs = allTxs.filter(
-          tx => tx.fromAddress === input.address || tx.toAddress === input.address
-        );
-        
-        return {
-          address,
-          transactions: addressTxs,
-        };
-      }),
-      
-    updateWhitelist: adminProcedure
-      .input(z.object({
-        address: z.string(),
-        isWhitelisted: z.boolean(),
-      }))
-      .mutation(async ({ input }) => {
-        await db.upsertAddress({
-          address: input.address,
-          network: "ethereum",
-          isWhitelisted: input.isWhitelisted,
-          riskScore: 0,
-          label: null,
-          totalTransactions: 0,
-          suspiciousTransactions: 0,
-        });
-        return { success: true };
-      }),
-      
-    updateBlacklist: adminProcedure
-      .input(z.object({
-        address: z.string(),
-        isBlacklisted: z.boolean(),
-      }))
-      .mutation(async ({ input }) => {
-        await db.upsertAddress({
-          address: input.address,
-          network: "ethereum",
-          isBlacklisted: input.isBlacklisted,
-          riskScore: 100,
-          label: null,
-          totalTransactions: 0,
-          suspiciousTransactions: 0,
-        });
-        return { success: true };
-      }),
+      list: protectedProcedure
+        .input(z.object({ limit: z.number().optional() }))
+        .query(async ({ input }) => {
+            return db.getAllAddresses(input.limit);
+        }),
+      getByAddress: protectedProcedure
+        .input(z.object({ address: z.string() }))
+        .query(async ({ input }) => {
+            return db.getAddressByAddress(input.address);
+        }),
   }),
 
   // ========== ALERTS ==========
   alerts: router({
     list: protectedProcedure
-      .input(z.object({
-        limit: z.number().optional(),
-        isRead: z.boolean().optional(),
-        severity: z.enum(["low", "medium", "high", "critical"]).optional(),
-      }))
+      .input(z.object({ 
+          limit: z.number().optional(), 
+          isRead: z.boolean().optional(),
+          severity: z.string().optional(),
+        }))
       .query(async ({ input }) => {
         return db.getAlerts(input);
       }),
-      
     markAsRead: protectedProcedure
       .input(z.object({ alertId: z.number() }))
       .mutation(async ({ input }) => {
-        await db.markAlertAsRead(input.alertId);
+        await db.markAsRead(input.alertId);
         return { success: true };
       }),
-      
     resolve: protectedProcedure
       .input(z.object({ alertId: z.number() }))
       .mutation(async ({ input, ctx }) => {
@@ -179,46 +173,32 @@ export const appRouter = router({
 
   // ========== REPORTS ==========
   reports: router({
-    list: protectedProcedure
-      .input(z.object({ limit: z.number().optional() }))
-      .query(async ({ input }) => {
-        return db.getReports(input.limit);
-      }),
-      
+    list: protectedProcedure.query(async () => {
+      return db.getReports();
+    }),
     generate: protectedProcedure
       .input(z.object({
         title: z.string(),
-        type: z.enum(["daily", "weekly", "monthly", "custom"]),
+        type: z.enum(['daily', 'weekly', 'monthly', 'custom']),
         startDate: z.date(),
         endDate: z.date(),
       }))
       .mutation(async ({ input, ctx }) => {
         const stats = await db.getTransactionStats(input.startDate, input.endDate);
-        const alerts = await db.getAlerts({ limit: 1000 });
-        
-        // Generate PDF report
-        const pdfUrl = await generatePDFReport({
-          title: input.title,
-          startDate: input.startDate,
-          endDate: input.endDate,
-          totalTransactions: stats.total,
-          suspiciousTransactions: stats.suspicious,
-          alertsGenerated: alerts.length,
-          avgRiskScore: stats.avgRiskScore,
+        const alerts = await db.getAlerts({ });
+        const reportUrl = await generatePDFReport({
+            ...input,
+            ...stats,
+            alertsGenerated: alerts.length,
         });
-        
         const report = await db.insertReport({
-          title: input.title,
-          type: input.type,
-          startDate: input.startDate,
-          endDate: input.endDate,
-          totalTransactions: stats.total,
-          suspiciousTransactions: stats.suspicious,
-          alertsGenerated: alerts.length,
-          pdfUrl,
-          generatedBy: ctx.user.id,
+            ...input,
+            totalTransactions: stats.total,
+            suspiciousTransactions: stats.suspicious,
+            alertsGenerated: alerts.length,
+            pdfUrl: reportUrl,
+            generatedBy: ctx.user.id,
         });
-        
         return report;
       }),
   }),
@@ -226,37 +206,23 @@ export const appRouter = router({
   // ========== ADMIN ==========
   admin: router({
     users: adminProcedure.query(async () => {
-      const db_instance = await db.getDb();
-      if (!db_instance) return [];
-      const { users } = await import("../drizzle/schema");
-      return db_instance.select().from(users);
+        // This needs to be implemented in db.ts
+        // return db.getAllUsers(); 
+        return [];
     }),
-    
     config: adminProcedure.query(async () => {
-      const riskThreshold = await db.getConfig("risk_threshold");
-      const alertEmail = await db.getConfig("alert_email");
-      
-      return {
-        riskThreshold: riskThreshold?.value || "60",
-        alertEmail: alertEmail?.value || "",
-      };
+        const riskThreshold = await db.getConfig('risk_threshold');
+        const alertEmail = await db.getConfig('alert_email');
+        return {
+            riskThreshold: riskThreshold ? parseInt(riskThreshold.value) : 60,
+            alertEmail: alertEmail ? alertEmail.value : null,
+        };
     }),
-    
-    updateConfig: adminProcedure
-      .input(z.object({
-        key: z.string(),
-        value: z.string(),
-      }))
-      .mutation(async ({ input }) => {
-        await db.setConfig(input.key, input.value);
-        return { success: true };
-      }),
-      
     seedData: adminProcedure
-      .input(z.object({ count: z.number().optional() }))
+      .input(z.object({ count: z.number().min(1).max(100) }))
       .mutation(async ({ input }) => {
-        await generateSeedData(input.count || 50);
-        return { success: true };
+        await generateSeedData(input.count);
+        return { success: true, generated: input.count };
       }),
   }),
 });
