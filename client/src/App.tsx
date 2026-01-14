@@ -15,7 +15,7 @@ import { useAuth } from "./_core/hooks/useAuth";
 import { trpc, trpcClient, trpcQueryClient } from "./lib/trpc";
 import { QueryClientProvider } from "@tanstack/react-query";
 
-const PrivateRoute = ({ component: Component, ...rest }) => {
+const PrivateRoute = ({ component: Component, ...rest }: { component: React.ComponentType<any>; [key: string]: any }) => {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {

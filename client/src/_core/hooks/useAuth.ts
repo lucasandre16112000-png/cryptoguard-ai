@@ -11,7 +11,7 @@ export function useAuth() {
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
-      utils.auth.me.setData(undefined, null);
+      utils.auth.me.setData(undefined, undefined);
     },
   });
 
@@ -19,7 +19,7 @@ export function useAuth() {
     try {
       await logoutMutation.mutateAsync();
     } finally {
-      utils.auth.me.setData(undefined, null);
+      utils.auth.me.setData(undefined, undefined);
       await utils.auth.me.invalidate();
     }
   }, [logoutMutation, utils]);

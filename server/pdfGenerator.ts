@@ -5,6 +5,7 @@
 
 export interface ReportData {
   title: string;
+  type: 'daily' | 'weekly' | 'monthly' | 'custom';
   startDate: Date;
   endDate: Date;
   totalTransactions: number;

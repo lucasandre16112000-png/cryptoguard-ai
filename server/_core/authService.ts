@@ -45,7 +45,7 @@ export class AuthService {
     }
   }
 
-  private parseCookies(req: Request): Map<string, string> {
+  private parseCookies(req: Request): Map<string, string | undefined> {
     const cookieHeader = req.headers.cookie;
     if (!cookieHeader) {
       return new Map();
@@ -72,8 +72,9 @@ export class AuthService {
 
     if (user) {
         await db.updateUserLastSignedIn(user.id);
+        return user;
     }
 
-    return user;
+    return null;
   }
 }

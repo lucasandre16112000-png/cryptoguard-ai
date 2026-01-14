@@ -187,9 +187,14 @@ export const appRouter = router({
         const stats = await db.getTransactionStats(input.startDate, input.endDate);
         const alerts = await db.getAlerts({ });
         const reportUrl = await generatePDFReport({
-            ...input,
-            ...stats,
+            title: input.title,
+            type: input.type,
+            startDate: input.startDate,
+            endDate: input.endDate,
+            totalTransactions: stats.total,
+            suspiciousTransactions: stats.suspicious,
             alertsGenerated: alerts.length,
+            avgRiskScore: stats.avgRiskScore || 0,
         });
         const report = await db.insertReport({
             ...input,
