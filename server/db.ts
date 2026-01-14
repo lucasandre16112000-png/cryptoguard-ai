@@ -272,3 +272,17 @@ export async function setConfig(key: string, value: string, description?: string
     await db.insert(systemConfig).values({ key, value, description });
   }
 }
+
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+  }).from(users).orderBy(desc(users.createdAt));
+}

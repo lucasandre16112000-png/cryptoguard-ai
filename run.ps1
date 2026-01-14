@@ -1,17 +1,29 @@
-Write-Host "CryptoGuard AI - Setup" -ForegroundColor Cyan
-Write-Host "=====================" -ForegroundColor Cyan
-Write-Host ""
+Write-Host "--- CryptoGuard AI Quick Start for Windows ---" -ForegroundColor Green
 
-Write-Host "Instalando dependencias..." -ForegroundColor Yellow
+# Etapa 1: Instalar o pnpm, se necessário
+if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+    Write-Host "pnpm não encontrado. Instalando globalmente..." -ForegroundColor Yellow
+    npm install -g pnpm
+} else {
+    Write-Host "pnpm já está instalado."
+}
+
+# Etapa 2: Instalar dependências do projeto
+Write-Host "Instalando dependências do projeto com pnpm..." -ForegroundColor Cyan
 pnpm install
 
-Write-Host ""
-Write-Host "Configurando banco de dados..." -ForegroundColor Yellow
-pnpm db:push
+# Etapa 3: Verificar a conexão com o banco de dados e aplicar migrações
+Write-Host "Configurando o banco de dados..." -ForegroundColor Cyan
+try {
+    pnpm db:push
+    Write-Host "Banco de dados configurado com sucesso!" -ForegroundColor Green
+} catch {
+    Write-Host "ERRO: Falha ao configurar o banco de dados." -ForegroundColor Red
+    Write-Host "Verifique se o MySQL está em execução e se o arquivo .env está correto." -ForegroundColor Yellow
+    exit 1
+}
 
-Write-Host ""
-Write-Host "Iniciando servidor..." -ForegroundColor Green
-Write-Host "Acesse: http://localhost:3000" -ForegroundColor Green
-Write-Host ""
-
+# Etapa 4: Iniciar a aplicação
+Write-Host "Iniciando a aplicação em modo de desenvolvimento..." -ForegroundColor Cyan
+Write-Host "Acesse http://localhost:3000 no seu navegador." -ForegroundColor Green
 pnpm dev

@@ -160,7 +160,7 @@ export const appRouter = router({
     markAsRead: protectedProcedure
       .input(z.object({ alertId: z.number() }))
       .mutation(async ({ input }) => {
-        await db.markAsRead(input.alertId);
+        await db.markAlertAsRead(input.alertId);
         return { success: true };
       }),
     resolve: protectedProcedure
@@ -206,9 +206,7 @@ export const appRouter = router({
   // ========== ADMIN ==========
   admin: router({
     users: adminProcedure.query(async () => {
-        // This needs to be implemented in db.ts
-        // return db.getAllUsers(); 
-        return [];
+        return db.getAllUsers();
     }),
     config: adminProcedure.query(async () => {
         const riskThreshold = await db.getConfig('risk_threshold');
