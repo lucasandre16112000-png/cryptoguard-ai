@@ -40,23 +40,25 @@ export async function createUser(user: Pick<InsertUser, 'email' | 'name' | 'pass
         throw new Error("User with this email already exists");
     }
 
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(user.passwordHash!, saltRounds);
-
+    // A senha já foi hashada no routers.ts, não fazer hash novamente aqui!
     const newUser: InsertUser = {
         ...user,
-        passwordHash: hashedPassword,
         role: 'user', // Default role
     };
 
-    const result = await db.insert(users).values(newUser);
-    const newUserId = Number(result[0].insertId);
+    try {
+        const result = await db.insert(users).values(newUser);
+        const newUserId = Number(result[0].insertId);
 
-    const createdUser = await getUserById(newUserId);
-    if (!createdUser) {
-        throw new Error("Failed to retrieve created user");
+        const createdUser = await getUserById(newUserId);
+        if (!createdUser) {
+            throw new Error("Failed to retrieve created user");
+        }
+        return createdUser;
+    } catch (error) {
+        console.error('[DB] Error creating user:', error);
+        throw error;
     }
-    return createdUser;
 }
 
 export async function getUserByEmail(email: string): Promise<User | undefined> {
