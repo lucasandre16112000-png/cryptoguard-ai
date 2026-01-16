@@ -1,6 +1,6 @@
 
 import * as bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { parse as parseCookieHeader } from 'cookie';
 import type { Request } from 'express';
 import * as db from '../db';
