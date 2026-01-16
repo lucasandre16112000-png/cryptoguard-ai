@@ -7,6 +7,7 @@ import { appRouter } from '../routers';
 import { createContext } from './context';
 import { serveStatic, setupVite } from './vite';
 import cookieParser from 'cookie-parser';
+import { startMonitoring } from '../blockchainMonitor';
 
 async function startServer() {
   const app = express();
@@ -32,6 +33,10 @@ async function startServer() {
   const port = process.env.PORT || 3000;
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    
+    // ✅ ATIVAR MONITORAMENTO EM TEMPO REAL
+    console.log('[✓] Iniciando monitoramento em tempo real de transações...');
+    startMonitoring(10000); // Gera novas transações a cada 10 segundos
   });
 }
 

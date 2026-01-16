@@ -20,6 +20,13 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  // ✅ Servir relatórios gerados
+  const reportsDir = path.resolve(import.meta.dirname, '../../reports');
+  if (!fs.existsSync(reportsDir)) {
+    fs.mkdirSync(reportsDir, { recursive: true });
+  }
+  app.use('/reports', express.static(reportsDir));
+
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
@@ -54,6 +61,13 @@ export function serveStatic(app: Express) {
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
+
+  // ✅ Servir relatórios gerados em produção também
+  const reportsDir = path.resolve(import.meta.dirname, '../../reports');
+  if (!fs.existsSync(reportsDir)) {
+    fs.mkdirSync(reportsDir, { recursive: true });
+  }
+  app.use('/reports', express.static(reportsDir));
 
   app.use(express.static(distPath));
 
