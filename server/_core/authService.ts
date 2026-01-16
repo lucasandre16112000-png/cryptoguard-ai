@@ -1,7 +1,7 @@
 
 import * as bcrypt from 'bcrypt';
-// ✅ IMPORTAÇÃO CORRIGIDA - Usar import * as para CommonJS
-import { sign, verify } from 'jsonwebtoken';
+// ✅ IMPORTAÇÃO CORRIGIDA - jsonwebtoken é CommonJS, usar require
+import jwt from 'jsonwebtoken';
 import { parse as parseCookieHeader } from 'cookie';
 import type { Request } from 'express';
 import * as db from '../db';
@@ -32,15 +32,15 @@ export class AuthService {
 
   async createSessionToken(payload: SessionPayload): Promise<string> {
     const secret = this.getSessionSecret();
-    // ✅ Usar a função importada diretamente
-    return sign(payload, secret, { expiresIn: '7d' });
+    // ✅ Usar jwt.sign() corretamente
+    return (jwt as any).sign(payload, secret, { expiresIn: '7d' });
   }
 
   async verifySession(token: string): Promise<SessionPayload | null> {
     try {
       const secret = this.getSessionSecret();
-      // ✅ Usar a função importada diretamente
-      const payload = verify(token, secret) as SessionPayload;
+      // ✅ Usar jwt.verify() corretamente
+      const payload = (jwt as any).verify(token, secret) as SessionPayload;
       return payload;
     } catch (error) {
       console.warn('[Auth] Session verification failed', String(error));
