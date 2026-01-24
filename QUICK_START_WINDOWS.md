@@ -51,7 +51,11 @@ If it shows a version, MySQL is ready! ✓
 1. Visit: https://github.com/lucasandre16112000-png/cryptoguard-ai
 2. Click green **"Code"** button
 3. Click **"Download ZIP"**
-4. Extract to a folder (ex: `C:\Users\YourName\Desktop\cryptoguard-ai`)
+4. **⚠️ IMPORTANT:** Extract to a permanent folder:
+   - ✅ Desktop
+   - ✅ Documents
+   - ✅ C:\Users\YourName\cryptoguard-ai
+   - ❌ Do NOT leave in temp folder!
 
 ---
 
@@ -60,7 +64,7 @@ If it shows a version, MySQL is ready! ✓
 ### Option A - Recommended:
 1. **Double-click** `CryptoGuardLauncher.bat`
 2. Wait for everything to install and start
-3. **Dashboard opens at: http://localhost:3000**
+3. **Dashboard opens automatically at: http://localhost:3000**
 
 ### Option B - Simple:
 1. **Double-click** `START.bat`
@@ -70,13 +74,12 @@ If it shows a version, MySQL is ready! ✓
 
 ## ✅ What the Script Does
 
-✓ Checks Node.js  
-✓ Checks MySQL  
 ✓ Installs pnpm (package manager)  
 ✓ Installs all dependencies  
 ✓ Creates database  
 ✓ Applies migrations  
 ✓ Starts the server  
+✓ Opens browser (CryptoGuardLauncher)  
 
 **All automatically!**
 
@@ -103,6 +106,10 @@ http://localhost:3000
 
 ## ❌ Troubleshooting
 
+### Error: "package.json not found"
+→ Extract the ZIP to a permanent folder (Desktop, Documents, etc)  
+→ Do NOT leave in Windows temp folder!
+
 ### Error: "Node.js not found"
 → Install from https://nodejs.org/
 
@@ -123,6 +130,7 @@ http://localhost:3000
 - Subsequent startups are faster
 - Keep MySQL running while using the app
 - Press Ctrl+C to stop the server
+- Extract ZIP to a **permanent folder**, not temp!
 
 ---
 
