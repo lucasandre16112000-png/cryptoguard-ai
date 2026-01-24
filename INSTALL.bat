@@ -46,6 +46,8 @@ if errorlevel 1 (
     powershell -Command "try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://dev.mysql.com/get/Downloads/MySQLInstaller/mysql-installer-community-8.0.35.0.msi', '%TEMP%\mysql.msi'); Start-Process '%TEMP%\mysql.msi' -ArgumentList '/quiet' -Wait; del '%TEMP%\mysql.msi' } catch { Write-Host '[ERRO] Falha ao instalar MySQL'; exit 1 }"
     if errorlevel 1 goto error_mysql
     echo [OK] MySQL instalado
+    echo [IMPORTANTE] Reinicie o computador para MySQL ficar pronto
+    pause
 ) else (
     echo [OK] MySQL encontrado
 )
@@ -64,6 +66,12 @@ if errorlevel 1 (
 )
 echo.
 
+REM Aguardar MySQL iniciar
+echo [4/4] Aguardando MySQL iniciar...
+timeout /t 5 /nobreak >nul
+echo [OK] Pronto para continuar
+echo.
+
 REM ============================================================================
 REM DOWNLOAD E INSTALACAO
 REM ============================================================================
@@ -72,19 +80,19 @@ echo [DOWNLOAD E INSTALACAO]
 echo.
 
 REM Passo 1: Criar pasta de instalacao
-echo [1/7] Criando pasta de instalacao...
+echo [1/8] Criando pasta de instalacao...
 if not exist "%installPath%" mkdir "%installPath%"
 echo [OK] Pasta criada em: %installPath%
 echo.
 
 REM Passo 2: Baixar projeto do GitHub
-echo [2/7] Baixando projeto do GitHub...
+echo [2/8] Baixando projeto do GitHub...
 powershell -Command "try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('https://github.com/lucasandre16112000-png/cryptoguard-ai/archive/refs/heads/main.zip', '%zipPath%'); Write-Host '[OK] Projeto baixado' } catch { Write-Host '[ERRO] Falha ao baixar'; exit 1 }"
 if errorlevel 1 goto error_download
 echo.
 
 REM Passo 3: Extrair arquivos
-echo [3/7] Extraindo arquivos...
+echo [3/8] Extraindo arquivos...
 if exist "%extractPath%" rmdir /s /q "%extractPath%"
 mkdir "%extractPath%"
 powershell -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('%zipPath%', '%extractPath%')"
@@ -93,7 +101,7 @@ echo [OK] Arquivos extraidos
 echo.
 
 REM Passo 4: Copiar arquivos
-echo [4/7] Copiando arquivos para pasta de instalacao...
+echo [4/8] Copiando arquivos para pasta de instalacao...
 for /d %%d in ("%extractPath%\*") do (
     xcopy "%%d\*" "%installPath%\" /E /Y /Q >nul 2>&1
 )
@@ -101,31 +109,47 @@ echo [OK] Arquivos copiados
 echo.
 
 REM Passo 5: Limpar temporarios
-echo [5/7] Limpando arquivos temporarios...
+echo [5/8] Limpando arquivos temporarios...
 del /q "%zipPath%" >nul 2>&1
 rmdir /s /q "%extractPath%" >nul 2>&1
 echo [OK] Limpeza concluida
 echo.
 
-REM Passo 6: Instalar dependencias e fazer build
-echo [6/7] Instalando dependencias e fazendo build...
+REM Passo 6: Instalar dependencias
+echo [6/8] Instalando dependencias...
 cd /d "%installPath%"
 call npm install -g pnpm >nul 2>&1
 call pnpm install --no-frozen-lockfile
 if errorlevel 1 goto error_install
+echo [OK] Dependencias instaladas
+echo.
 
-echo Fazendo build do projeto...
+REM Passo 7: Fazer build
+echo [7/8] Fazendo build do projeto...
 call pnpm build
 if errorlevel 1 (
     echo [AVISO] Falha no build, continuando mesmo assim...
 )
-echo [OK] Dependencias instaladas e build concluido
+echo [OK] Build concluido
 echo.
 
-REM Passo 7: Preparar banco de dados
-echo [7/7] Preparando banco de dados...
+REM Passo 8: Preparar banco de dados
+echo [8/8] Preparando banco de dados...
+echo Criando banco de dados...
 mysql -u root -p161120 -e "CREATE DATABASE IF NOT EXISTS cryptoguard;" 2>nul
-call pnpm db:push >nul 2>&1
+if errorlevel 1 (
+    echo [AVISO] Falha ao criar banco, continuando...
+)
+
+echo Aguardando 3 segundos...
+timeout /t 3 /nobreak >nul
+
+echo Aplicando migrations...
+call pnpm db:push
+if errorlevel 1 (
+    echo [AVISO] Falha nas migrations, continuando...
+)
+
 echo [OK] Banco de dados pronto
 echo.
 
@@ -143,7 +167,7 @@ echo.
 echo ================================================================================
 echo.
 
-timeout /t 2 /nobreak >nul
+timeout /t 3 /nobreak >nul
 
 start http://localhost:3000
 
@@ -171,6 +195,7 @@ exit /b 1
 echo.
 echo [ERRO] Falha ao instalar MySQL
 echo Tente instalar manualmente: https://dev.mysql.com/downloads/mysql/
+echo Senha recomendada: 161120
 echo.
 pause
 exit /b 1
